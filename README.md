@@ -27,6 +27,8 @@ user baru dibuat di dalam instance yang sama.
     yang tersimpan di sana.
 -   Auto backup terjadwal (systemd timer, atau cron) dengan retensi.
 -   Tujuan backup: lokal saja, Cloudflare R2 saja, atau lokal + R2.
+-   **Backup & restore server MariaDB lain** (VPS lain, layanan managed) lewat
+    profil koneksi; bisa dipakai tanpa instance lokal sama sekali.
 
 ## Prasyarat
 
@@ -90,6 +92,7 @@ Catatan:
 14. Hapus database + user
 15. Rotasi sertifikat SSL
 16. Uninstall instance (hapus container, opsional data)
+17. Server remote: backup & restore (server MariaDB lain)
  0. Keluar
 ```
 
@@ -489,6 +492,76 @@ status upload R2, baris error, dan peringatan sertifikat jika ada.
     chat ID yang sudah tersimpan.
 -   Gagal mengirim notifikasi **tidak** mengubah status backup.
 -   Menu 13 → 9 mengirim pesan tes, 13 → 10 mematikan notifikasi.
+
+## Server remote: backup & restore
+
+Menu **17** mem-backup dan me-restore server MariaDB **lain**, yang tidak
+dikelola script ini (VPS lain, layanan managed, dll.). Instance lokal **tidak
+wajib** di-setup: `mariadb-manager.sh` bisa dipakai murni sebagai tool backup.
+
+``` text
+  1. Tambah / ubah profil server
+  2. Tes koneksi profil
+  3. Backup sekarang
+  4. Restore (ke server remote atau instance lokal)
+  5. Hapus profil
+```
+
+### Profil server
+
+Setiap server disimpan sebagai profil di `remotes/<nama>.conf` (root, `600`):
+host, port, user, password, mode SSL, file CA, daftar database (`all` atau
+`db1,db2`), ikut auto backup (`yes`/`no`), dan klien (`auto`/`host`/`docker`).
+Setelah disimpan, koneksi langsung dites: versi server, apakah koneksi
+terenkripsi, klien yang akan dipakai, dan daftar database yang terlihat.
+
+- **Mode SSL**: `DISABLED`, `REQUIRED` (default, terenkripsi tanpa verifikasi), `VERIFY_IDENTITY` (cek CA + nama host; isi file CA jika sertifikat self-signed).
+- **Hak akses user backup**: `GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT ON *.* TO 'backup'@'%';`. Backup akun user dilewati otomatis jika tidak ada hak membaca `mysql.user`.
+- Server harus bisa dijangkau dari server ini (firewall, allowlist IP di
+  layanan managed).
+
+  Contoh                  Host                    SSL
+  ----------------------- ----------------------- ------------------------------
+  Amazon RDS MariaDB      endpoint instance       `VERIFY_IDENTITY` + bundle CA RDS
+  SkySQL / hosting lain   endpoint/IP             `REQUIRED`
+  VPS lain                IP/domain server        `REQUIRED`
+
+### Klien dump (otomatis)
+
+`mariadb-dump` di host dipakai jika versinya sama atau lebih baru dari server; selain itu container `mariadb:<versi server>` (fallback `mariadb:11.4`). Container memakai `--network host`, sehingga bisa menjangkau
+alamat yang sama dengan host. Password selalu lewat variabel lingkungan
+(`PGPASSWORD`/`MYSQL_PWD`), tidak pernah muncul di argumen proses (`ps`).
+
+### Backup
+
+-   **Manual** (menu 17 → 3): `backups/remote/<profil>/<db>-YYYYMMDD-HHMMSS.sql.gz`,
+    divalidasi sama seperti backup lokal. Bisa langsung di-upload ke R2
+    (`manual/remote/<profil>/`).
+-   **Terjadwal**: profil dengan `auto: yes` ikut dijalankan oleh jadwal di menu
+    auto backup (jam, tujuan lokal/R2, retensi, dan notifikasi Telegram yang
+    sama). Hasil: `backups/auto/remote/<profil>/`, di R2: `auto/remote/<profil>/`.
+    Retensi lokal & R2 berlaku per profil (backup terbaru tiap database selalu
+    disisakan). Jika satu profil gagal, profil lain tetap jalan dan status run
+    dicatat gagal.
+-   Jika instance lokal belum di-setup, jadwal tetap bisa diaktifkan; hanya
+    profil remote yang di-backup.
+
+### Restore
+
+Menu 17 → 4: pilih file dari daftar (backup lokal, backup remote, dan R2
+ditampilkan bersama; sumber backup remote ditandai `lokal:<profil>` atau
+`R2:auto:<profil>`), lalu pilih tujuan:
+
+-   **0 = instance lokal**: memakai alur restore lokal (menu 7). Cocok untuk
+    migrasi, mis. dari layanan managed ke server ini.
+-   **Profil remote**: database tujuan disarankan sesuai nama file; jika belum
+    ada, ditawarkan untuk dibuat. Database yang sudah ada di-backup dulu
+    (default ya). Konfirmasi dengan mengetik `<profil>/<database>`.
+
+Restore tidak atomik; backup pengaman database tujuan dibuat lebih dulu (default ya). Opsi **kosongkan database dulu** (DROP + CREATE). `DEFINER` ditawarkan untuk diganti ke `CURRENT_USER`. Kolom generated dari export GUI diperbaiki seperti restore lokal (dump `mariadb-dump` tidak perlu).
+
+Server dengan engine berbeda ditolak dengan jelas (mis. profil di
+`mysql-manager.sh` yang ternyata MariaDB, atau sebaliknya).
 
 ## Uninstall instance
 

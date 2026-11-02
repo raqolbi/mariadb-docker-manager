@@ -17,3 +17,5 @@ telegram.conf
 certs/
 data/
 backups/
+remotes/
+.profile.*
