@@ -1,0 +1,19 @@
+# File runtime yang dibuat mariadb-manager.sh di folder ini.
+# Berisi password, private key, kredensial R2/Telegram, data database, dan backup:
+# JANGAN di-commit.
+.env
+.env.*
+compose.yaml
+backup.conf
+r2.conf
+telegram.conf
+.backup.lock
+.rclone-env.*
+.r2conf.*
+.tgconf.*
+.r2-test.*
+.r2-delete.*
+.ssl.*
+certs/
+data/
+backups/
