@@ -515,7 +515,8 @@ host, port, user, password, mode SSL, file CA, daftar database (`all` atau
 Setelah disimpan, koneksi langsung dites: versi server, apakah koneksi
 terenkripsi, klien yang akan dipakai, dan daftar database yang terlihat.
 
-- **Mode SSL**: `DISABLED`, `REQUIRED` (default, terenkripsi tanpa verifikasi), `VERIFY_IDENTITY` (cek CA + nama host; isi file CA jika sertifikat self-signed).
+- **Mode SSL**: `DISABLED`, `REQUIRED` (default, terenkripsi tanpa verifikasi), `VERIFY_IDENTITY` (cek CA + nama host; file CA kosong atau `system` = bundle CA bawaan OS, isi path file CA jika sertifikat self-signed).
+- **Nama database**: database remote yang namanya mengandung karakter selain huruf, angka, `_`, `$`, `-` dilewati (dicatat gagal), supaya nama dari server tidak bisa dipakai untuk menulis file di luar folder backup atau disisipkan sebagai opsi klien.
 - **Hak akses user backup**: `GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT ON *.* TO 'backup'@'%';`. Backup akun user dilewati otomatis jika tidak ada hak membaca `mysql.user`.
 - Server harus bisa dijangkau dari server ini (firewall, allowlist IP di
   layanan managed).
