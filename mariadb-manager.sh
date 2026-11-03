@@ -75,6 +75,14 @@ load_config() {
         if [[ "$value" =~ ^[0-9]+$ ]]; then printf -v "$key" '%s' "$value"; fi ;;
     esac
   done < "$ENV_FILE"
+  # Nama project Compose wajib huruf kecil (folder seperti /mnt/data/Databases/...).
+  # .env lama dari versi sebelumnya diperbaiki di tempat.
+  local cpn
+  cpn=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$ENV_FILE" | tail -n1)
+  if [[ -n "$cpn" && ! "$cpn" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+    cpn=$(printf '%s' "${cpn,,}" | tr -c 'a-z0-9_-' '-')
+    sed -i "s/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=$cpn/" "$ENV_FILE"
+  fi
   : "${MARIADB_IMAGE:=mariadb:11.4}"
   : "${MARIADB_PORT:=3308}"
   : "${MARIADB_COLLATION:=utf8mb4_uca1400_ai_ci}"
@@ -327,7 +335,7 @@ MARIADB_CONTAINER=$container
 MARIADB_UID=$my_uid
 MARIADB_GID=$my_gid
 MARIADB_COLLATION=$collation
-COMPOSE_PROJECT_NAME=mdm-${SCHED_ID}
+COMPOSE_PROJECT_NAME=mdm-${SCHED_ID,,}
 EOF
   chmod 600 "$ENV_FILE"
 
