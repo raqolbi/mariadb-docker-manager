@@ -3020,7 +3020,8 @@ main_menu() {
     echo "17. Server remote: backup & restore (server MariaDB lain)"
     echo " 0. Keluar"
     echo "=============================================="
-    if ! read -r -p "Pilih menu: " choice; then echo; exit 0; fi
+    if ! read -r -p "Pilih menu [0]: " choice; then echo; exit 0; fi
+    choice=${choice//[[:space:]]/}; choice=${choice:-0}
     echo
     case "$choice" in
       1) run_action setup_stack ;;
@@ -3040,7 +3041,7 @@ main_menu() {
       15) run_action rotate_ssl ;;
       16) run_action uninstall_instance ;;
       17) run_action remote_menu ;;
-      0) echo "Selesai."; exit 0 ;;
+      0|00) echo "Selesai."; exit 0 ;;
       *) echo "Pilihan tidak dikenal."; pause ;;
     esac
   done
